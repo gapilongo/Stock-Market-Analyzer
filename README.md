@@ -19,7 +19,7 @@ This Streamlit application provides an advanced stock market analysis tool. It f
 ## Usage
 Run the Streamlit app:
 ```
-streamlit run app/main.py
+streamlit run main.py
 ```
 
 Enter a stock ticker, select date range, and click "Analyze" to view the results.
