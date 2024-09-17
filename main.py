@@ -274,4 +274,7 @@ def main():
 
 if __name__ == "__main__":
     main() 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dfb6867 (Rename app.py to main.py)
