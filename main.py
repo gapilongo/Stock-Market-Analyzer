@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 # File: app/main.py
 import streamlit as st
@@ -129,6 +130,8 @@ def main():
 if __name__ == "__main__":
     main()
 
+=======
+>>>>>>> origin/dev2
 # File: app/main.py
 import streamlit as st
 import yfinance as yf
@@ -275,6 +278,9 @@ def main():
 if __name__ == "__main__":
     main() 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 >>>>>>> dfb6867 (Rename app.py to main.py)
+=======
+>>>>>>> origin/dev2
