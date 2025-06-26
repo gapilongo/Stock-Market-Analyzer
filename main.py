@@ -67,6 +67,62 @@ def sma_crossover_strategy(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
+def create_candlestick_chart(data: pd.DataFrame, ticker: str) -> go.Figure:
+    fig = go.Figure(
+        data=[
+            go.Candlestick(
+                x=data.index,
+                open=data['Open'],
+                high=data['High'],
+                low=data['Low'],
+                close=data['Close'],
+                name=f"{ticker} Candlesticks",
+                increasing_line_color='#2ECC71',  # Green for bullish
+                decreasing_line_color='#E74C3C'   # Red for bearish
+            ),
+            go.Scatter(
+                x=data.index,
+                y=data['SMA_20'],
+                line=dict(color='blue', width=1),
+                name="20-day SMA"
+            ),
+            go.Scatter(
+                x=data.index,
+                y=data['SMA_50'],
+                line=dict(color='orange', width=1),
+                name="50-day SMA"
+            )
+        ]
+    )
+    
+    # Add volume as subplot
+    fig.add_trace(
+        go.Bar(
+            x=data.index,
+            y=data['Volume'],
+            name="Volume",
+            marker_color='rgba(100, 100, 100, 0.5)',
+            yaxis="y2"
+        )
+    )
+    
+    fig.update_layout(
+        title=f"{ticker} Candlestick Chart with Volume",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        yaxis2=dict(
+            title="Volume",
+            overlaying="y",
+            side="right",
+            showgrid=False
+        ),
+        legend_title="Indicators",
+        hovermode="x unified",
+        height=600
+    )
+    return fig
+
+
 def create_comparison_chart(ticker_data: dict) -> go.Figure:
     fig = go.Figure()
     for ticker, data in ticker_data.items():
@@ -124,55 +180,75 @@ def main():
                 ticker_data[ticker] = data
 
         if ticker_data:
-            price_chart = create_comparison_chart(ticker_data)
-            st.plotly_chart(price_chart, use_container_width=True)
+            # Create tabs
+            tab1, tab2, tab3 = st.tabs(["Candlestick Charts", "Multi-Stock Comparison", "Recent Data & Analysis"])
+            
+            with tab1:
+                # Display candlestick charts with volume for each stock
+                for ticker, data in ticker_data.items():
+                    st.subheader(f"{ticker} Candlestick Chart")
+                    candlestick_chart = create_candlestick_chart(data, ticker)
+                    st.plotly_chart(candlestick_chart, use_container_width=True)
 
-            rsi_chart = create_comparison_rsi_chart(ticker_data)
-            st.plotly_chart(rsi_chart, use_container_width=True)
+            with tab2:
+                # Display multi-stock comparison line chart
+                st.subheader("Price Comparison")
+                price_chart = create_comparison_chart(ticker_data)
+                st.plotly_chart(price_chart, use_container_width=True)
 
-            st.subheader("Recent Data")
-            for ticker, data in ticker_data.items():
-                st.write(f"**{ticker}** Stock Analysis")
-                st.dataframe(data.tail().style.format({'Close': '${:.2f}', 'SMA_20': '${:.2f}', 'SMA_50': '${:.2f}', 'RSI': '{:.2f}'}))
+                # RSI comparison
+                st.subheader("RSI Comparison")
+                rsi_chart = create_comparison_rsi_chart(ticker_data)
+                st.plotly_chart(rsi_chart, use_container_width=True)
 
-                last_close = data['Close'].iloc[-1]
-                sma_20 = data['SMA_20'].iloc[-1]
-                sma_50 = data['SMA_50'].iloc[-1]
-                rsi = data['RSI'].iloc[-1]
+            with tab3:
+                # Display performance metrics and recent data
+                st.subheader("Recent Data & Technical Analysis")
+                for ticker, data in ticker_data.items():
+                    with st.expander(f"{ticker} Analysis"):
+                        st.write(f"**Recent Data**")
+                        st.dataframe(data.tail().style.format({'Close': '${:.2f}', 'SMA_20': '${:.2f}', 'SMA_50': '${:.2f}', 'RSI': '{:.2f}'}))
 
-                if last_close > sma_20 > sma_50:
-                    st.write(f"{ticker}: The stock is in an **uptrend**. The current price is above both the 20-day and 50-day SMAs.")
-                elif last_close < sma_20 < sma_50:
-                    st.write(f"{ticker}: The stock is in a **downtrend**. The current price is below both the 20-day and 50-day SMAs.")
-                else:
-                    st.write(f"{ticker}: The stock is showing **mixed signals**. Consider additional indicators for a clearer picture.")
+                        last_close = data['Close'].iloc[-1]
+                        sma_20 = data['SMA_20'].iloc[-1]
+                        sma_50 = data['SMA_50'].iloc[-1]
+                        rsi = data['RSI'].iloc[-1]
 
-                if rsi > 70:
-                    st.write(f"{ticker}: The RSI indicates that the stock may be **overbought**.")
-                elif rsi < 30:
-                    st.write(f"{ticker}: The RSI indicates that the stock may be **oversold**.")
-                else:
-                    st.write(f"{ticker}: The RSI is **neutral**, indicating neither overbought nor oversold conditions.")
+                        st.write(f"**Trend Analysis**")
+                        if last_close > sma_20 > sma_50:
+                            st.write(f"The stock is in an **uptrend**. The current price is above both the 20-day and 50-day SMAs.")
+                        elif last_close < sma_20 < sma_50:
+                            st.write(f"The stock is in a **downtrend**. The current price is below both the 20-day and 50-day SMAs.")
+                        else:
+                            st.write(f"The stock is showing **mixed signals**. Consider additional indicators for a clearer picture.")
 
-                final_strategy_return = data['Cumulative Strategy Return'].iloc[-1] * 100
-                final_market_return = data['Cumulative Market Return'].iloc[-1] * 100
-                num_trades = data['Position'].abs().sum()
+                        st.write(f"**RSI Analysis**")
+                        if rsi > 70:
+                            st.write(f"The RSI indicates that the stock may be **overbought**.")
+                        elif rsi < 30:
+                            st.write(f"The RSI indicates that the stock may be **oversold**.")
+                        else:
+                            st.write(f"The RSI is **neutral**, indicating neither overbought nor oversold conditions.")
 
-                st.write(f"**{ticker} SMA Crossover Strategy Performance:**")
-                st.write(f"- Total Strategy Return: {final_strategy_return:.2f}%")
-                st.write(f"- Total Market Return: {final_market_return:.2f}%")
-                st.write(f"- Number of Trades Executed: {int(num_trades)}")
+                        final_strategy_return = data['Cumulative Strategy Return'].iloc[-1] * 100
+                        final_market_return = data['Cumulative Market Return'].iloc[-1] * 100
+                        num_trades = data['Position'].abs().sum()
 
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=data.index, y=data['Cumulative Market Return'], name="Market Return"))
-                fig.add_trace(go.Scatter(x=data.index, y=data['Cumulative Strategy Return'], name="Strategy Return"))
-                fig.update_layout(
-                    title=f"{ticker} Cumulative Returns: Market vs SMA Crossover Strategy",
-                    xaxis_title="Date",
-                    yaxis_title="Cumulative Return",
-                    hovermode="x unified"
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                        st.write(f"**SMA Crossover Strategy Performance**")
+                        st.write(f"- Total Strategy Return: {final_strategy_return:.2f}%")
+                        st.write(f"- Total Market Return: {final_market_return:.2f}%")
+                        st.write(f"- Number of Trades Executed: {int(num_trades)}")
+
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(x=data.index, y=data['Cumulative Market Return'], name="Market Return"))
+                        fig.add_trace(go.Scatter(x=data.index, y=data['Cumulative Strategy Return'], name="Strategy Return"))
+                        fig.update_layout(
+                            title=f"Cumulative Returns: Market vs SMA Crossover Strategy",
+                            xaxis_title="Date",
+                            yaxis_title="Cumulative Return",
+                            hovermode="x unified"
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
 
 
 if __name__ == "__main__":
